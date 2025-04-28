@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=79.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hear-me-out"
+version = "0.1.0"
+description = "Backend service"
+authors = [{ name = "Chen Shanhan", email = "c.shanhan3@gmail.com" }]
+dependencies = [
+  "fastapi>=0.115.12",
+  "uvicorn>=0.34.2",
+  "python-dotenv>=1.1.0",
+  "pydantic>=2.11.3",
+  "torch>=2.7.0",
+  "transformers>=4.51.3",
+  "librosa>=0.11.0",
+  "python-multipart>=0.0.20"
+]
+requires-python = ">=3.13"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.5",
+  "black>=25.1.0",
+  "isort>=6.0.1",
+  "flake8>=7.2.0",
+  "httpx>=0.28.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py313']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+
+[tool.pytest.ini_options]
+pythonpath = "."

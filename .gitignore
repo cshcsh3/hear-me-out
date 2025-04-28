@@ -1,0 +1,76 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Testing
+/coverage
+.nyc_output
+
+# Production
+/build
+/dist
+/.next/
+/out/
+
+# Misc
+.DS_Store
+*.pem
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+*.egg-info/
+*.egg
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+backend/.vscode/
+backend/build/
+backend/*.egg-info/
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.venv/
+
+# Database
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db 
