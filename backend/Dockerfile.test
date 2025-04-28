@@ -1,0 +1,23 @@
+# Use Python 3.13 as the base image
+FROM python:3.13.3-slim-bookworm
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy code into image
+COPY pyproject.toml .
+COPY src ./src
+COPY tests ./tests
+
+# Install Python dependencies including test dependencies
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir ".[dev]"
+
+# Set the command to run tests
+CMD ["pytest", "-v"] 

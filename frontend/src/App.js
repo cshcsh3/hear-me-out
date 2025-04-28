@@ -100,7 +100,7 @@ export default function App() {
         setTimeout(() => {
           setSuccessMessage('');
           setError(null);
-        }, 3000);
+        }, 10000);
       }
     }
   };
