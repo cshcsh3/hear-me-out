@@ -3,6 +3,7 @@
 import sqlite3
 from datetime import datetime
 from typing import Optional, Dict, Any, List
+from contextlib import contextmanager
 
 
 class TranscriptionRecord:
@@ -39,23 +40,33 @@ class TranscriptionsRepository:
 
     def __init__(self, db_path: str):
         """Initialize the repository with database connection."""
-        self.conn = sqlite3.connect(db_path)
-        self.cursor = self.conn.cursor()
+        self.db_path = db_path
         self._create_table()
+
+    @contextmanager
+    def _get_connection(self):
+        """Get a database connection with proper error handling."""
+        conn = sqlite3.connect(self.db_path, timeout=30)  # Add timeout to handle locks
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def _create_table(self):
         """Create the transcriptions table if it doesn't exist."""
-        self.cursor.execute(
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS transcriptions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    audio_file_name TEXT NOT NULL UNIQUE,
+                    transcribed_text TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             """
-            CREATE TABLE IF NOT EXISTS transcriptions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                audio_file_name TEXT NOT NULL UNIQUE,
-                transcribed_text TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """
-        )
-        self.conn.commit()
+            conn.commit()
 
     def get_all(self) -> List[TranscriptionRecord]:
         """Retrieve all transcriptions.
@@ -63,17 +74,19 @@ class TranscriptionsRepository:
         Returns:
             List of all transcriptions
         """
-        self.cursor.execute("SELECT * FROM transcriptions")
-        rows = self.cursor.fetchall()
-        return [
-            TranscriptionRecord(
-                record_id=row[0],
-                audio_file_name=row[1],
-                transcribed_text=row[2],
-                created_at=datetime.fromisoformat(row[3]),
-            )
-            for row in rows
-        ]
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM transcriptions")
+            rows = cursor.fetchall()
+            return [
+                TranscriptionRecord(
+                    record_id=row[0],
+                    audio_file_name=row[1],
+                    transcribed_text=row[2],
+                    created_at=datetime.fromisoformat(row[3]),
+                )
+                for row in rows
+            ]
 
     def get(self, id: int) -> Optional[TranscriptionRecord]:
         """Retrieve a transcription by ID.
@@ -84,16 +97,18 @@ class TranscriptionsRepository:
         Returns:
             Transcription record if found, None otherwise
         """
-        self.cursor.execute("SELECT * FROM transcriptions WHERE id = ?", (id,))
-        row = self.cursor.fetchone()
-        if row is None:
-            return None
-        return TranscriptionRecord(
-            record_id=row[0],
-            audio_file_name=row[1],
-            transcribed_text=row[2],
-            created_at=datetime.fromisoformat(row[3]),
-        )
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM transcriptions WHERE id = ?", (id,))
+            row = cursor.fetchone()
+            if row is None:
+                return None
+            return TranscriptionRecord(
+                record_id=row[0],
+                audio_file_name=row[1],
+                transcribed_text=row[2],
+                created_at=datetime.fromisoformat(row[3]),
+            )
 
     def create(self, audio_file_name: str, transcribed_text: str) -> int:
         """Create a new transcription record.
@@ -108,17 +123,19 @@ class TranscriptionsRepository:
         Raises:
             sqlite3.IntegrityError: If a transcription with the same audio_file_name already exists
         """
-        try:
-            self.cursor.execute(
-                "INSERT INTO transcriptions (audio_file_name, transcribed_text) VALUES (?, ?)",
-                (audio_file_name, transcribed_text),
-            )
-            self.conn.commit()
-            return self.cursor.lastrowid
-        except sqlite3.IntegrityError as e:
-            if "UNIQUE constraint failed" in str(e):
-                raise ValueError(f"A transcription for file '{audio_file_name}' already exists")
-            raise
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    "INSERT INTO transcriptions (audio_file_name, transcribed_text) VALUES (?, ?)",
+                    (audio_file_name, transcribed_text),
+                )
+                conn.commit()
+                return cursor.lastrowid
+            except sqlite3.IntegrityError as e:
+                if "UNIQUE constraint failed" in str(e):
+                    raise ValueError(f"A transcription for file '{audio_file_name}' already exists")
+                raise
 
     def search(self, query: str) -> List[TranscriptionRecord]:
         """Search for transcriptions by query.
@@ -129,17 +146,19 @@ class TranscriptionsRepository:
         Returns:
             List of transcriptions matching the query
         """
-        self.cursor.execute(
-            "SELECT * FROM transcriptions WHERE LOWER(transcribed_text) LIKE LOWER(?) OR LOWER(audio_file_name) LIKE LOWER(?)",
-            (f"%{query}%", f"%{query}%"),
-        )
-        rows = self.cursor.fetchall()
-        return [
-            TranscriptionRecord(
-                record_id=row[0],
-                audio_file_name=row[1],
-                transcribed_text=row[2],
-                created_at=datetime.fromisoformat(row[3]),
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM transcriptions WHERE LOWER(transcribed_text) LIKE LOWER(?) OR LOWER(audio_file_name) LIKE LOWER(?)",
+                (f"%{query}%", f"%{query}%"),
             )
-            for row in rows
-        ]
+            rows = cursor.fetchall()
+            return [
+                TranscriptionRecord(
+                    record_id=row[0],
+                    audio_file_name=row[1],
+                    transcribed_text=row[2],
+                    created_at=datetime.fromisoformat(row[3]),
+                )
+                for row in rows
+            ]

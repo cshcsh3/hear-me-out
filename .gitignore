@@ -61,11 +61,6 @@ backend/__pycache__/
 backend/.pytest_cache/
 backend/.venv/
 
-# Database
-backend/*.db
-backend/*.sqlite
-backend/*.sqlite3
-
 # OS generated files
 .DS_Store
 .DS_Store?
