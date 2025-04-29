@@ -8,13 +8,16 @@ def test_health(client):
     assert response.json() == {"status": "ok"}
 
 
-def test_transcribe_success(client, mock_transcriber, tmp_path):
+def test_transcribe_success(client, mock_transcriber, mock_transcriptions, tmp_path):
     """Test successful transcription."""
-    mock_transcriber.transcribe_audio.return_value = ("123", "Test transcription")
+    mock_transcriber.transcribe_audio.return_value = "Test transcription"
+    mock_transcriptions.create.return_value = "123"
+    
     test_file = tmp_path / "test.mp3"
     test_file.touch()
     with open(test_file, "rb") as f:
         response = client.post("/transcribe", files={"files": ("test.mp3", f, "audio/mpeg")})
+    
     assert response.status_code == 200
     assert response.json() == {
         "status": "success",
@@ -117,10 +120,12 @@ def test_transcribe_throws_unexpected_error(client, mock_transcriber, tmp_path):
     test_file.unlink()
 
 
-def test_transcribe_duplicate_file(client, mock_transcriber, tmp_path):
+def test_transcribe_duplicate_file(client, mock_transcriber, mock_transcriptions, tmp_path):
     """Test the transcribe endpoint with a duplicate file name."""
     # First transcription attempt
-    mock_transcriber.transcribe_audio.return_value = ("123", "Test transcription")
+    mock_transcriber.transcribe_audio.return_value = "Test transcription"
+    mock_transcriptions.create.return_value = "123"
+    
     test_file = tmp_path / "test.mp3"
     test_file.touch()
     with open(test_file, "rb") as f:
@@ -128,7 +133,7 @@ def test_transcribe_duplicate_file(client, mock_transcriber, tmp_path):
     assert response.status_code == 200
 
     # Second attempt with same file name should fail
-    mock_transcriber.transcribe_audio.side_effect = ValueError("A transcription for file 'test.mp3' already exists")
+    mock_transcriptions.create.side_effect = ValueError("A transcription for file 'test.mp3' already exists")
     with open(test_file, "rb") as f:
         response = client.post("/transcribe", files={"files": ("test.mp3", f, "audio/mpeg")})
     assert response.status_code == 409

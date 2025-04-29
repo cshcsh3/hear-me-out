@@ -1,11 +1,10 @@
 """Service module for audio transcription using OpenAI's Whisper model."""
 
-from typing import Tuple, Optional
+from typing import Optional
 import logging
 import librosa
 import torch
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
-from transcription.service import TranscriptionsService
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -27,11 +26,10 @@ class TranscriberService:
         # Check if GPU is available and move model to GPU if possible
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = self.model.to(self.device)
-        self.transcriptions_service = TranscriptionsService()
         self.language = language
 
 
-    def transcribe_audio(self, audio_path: str) -> Optional[Tuple[int, str]]:
+    def transcribe_audio(self, audio_path: str) -> Optional[str]:
         """Transcribe audio file to text and store in database.
 
         Args:
@@ -41,9 +39,6 @@ class TranscriberService:
             Tuple of (transcription_id, transcribed_text) or None if transcription fails
         """
         try:
-            # Get the audio file name from the path
-            audio_file_name = audio_path.split("/")[-1]
-
             # Load and preprocess the audio
             input_features = self._preprocess_audio(audio_path)
 
@@ -62,12 +57,7 @@ class TranscriberService:
                 clean_up_tokenization_spaces=True,
             )[0]
 
-            # Store in database using the transcriptions service
-            transcription_id = self.transcriptions_service.create(
-                audio_file_name=audio_file_name, transcription_text=transcribed_text
-            )
-
-            return transcription_id, transcribed_text
+            return transcribed_text
         except Exception as e:
             self._handle_error(e)
 

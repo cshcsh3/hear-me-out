@@ -27,4 +27,9 @@ def mock_transcriptions():
 @pytest.fixture
 def client(mock_transcriber, mock_transcriptions):
     """Create a test client for the FastAPI application with mocked services."""
+    # Override the app's dependencies with our mocks
+    app.dependency_overrides = {
+        "get_transcriber": lambda: mock_transcriber,
+        "get_transcriptions_service": lambda: mock_transcriptions
+    }
     return TestClient(app)

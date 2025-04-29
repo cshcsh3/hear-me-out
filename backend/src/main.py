@@ -5,7 +5,7 @@ import tempfile
 import traceback
 import os
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from transcriber.service import TranscriberService
@@ -37,6 +37,16 @@ app.add_middleware(
 )
 
 
+def get_transcriber():
+    """Dependency for getting the transcriber service."""
+    return TranscriberService()
+
+
+def get_transcriptions_service():
+    """Dependency for getting the transcriptions service."""
+    return TranscriptionsService()
+
+
 @app.get("/health")
 async def health():
     """Return a simple health check message."""
@@ -44,11 +54,17 @@ async def health():
 
 
 @app.post("/transcribe")
-async def transcribe(files: List[UploadFile] = File(...)) -> JSONResponse:
+async def transcribe(
+    files: List[UploadFile] = File(...),
+    transcriber: TranscriberService = Depends(get_transcriber),
+    transcriptions_service: TranscriptionsService = Depends(get_transcriptions_service)
+) -> JSONResponse:
     """Transcribe multiple audio files.
 
     Args:
         files: List of audio files to transcribe
+        transcriber: Transcriber service instance
+        transcriptions_service: Transcriptions service instance
 
     Returns:
         JSON response with transcription details or error message
@@ -59,9 +75,6 @@ async def transcribe(files: List[UploadFile] = File(...)) -> JSONResponse:
     results = []
     temp_files = []
     temp_dir = tempfile.mkdtemp()
-    
-    # Initialize transcriber
-    transcriber = TranscriberService()
 
     try:
         for file in files:
@@ -81,13 +94,18 @@ async def transcribe(files: List[UploadFile] = File(...)) -> JSONResponse:
             # Process the file
             result = transcriber.transcribe_audio(temp_file_path)
 
+            # Store the transcription in the database
+            transcription_id = transcriptions_service.create(
+                audio_file_name=file.filename, transcription_text=result
+            )
+
             if result is None:
                 raise HTTPException(status_code=400, detail=f"Audio transcription failed for {file.filename}")
 
             results.append({
                 "status": "success",
-                "transcription_id": result[0],
-                "transcription_text": result[1],
+                "transcription_id": transcription_id,
+                "transcription_text": result,
                 "filename": file.filename
             })
 
