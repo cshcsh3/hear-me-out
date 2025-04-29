@@ -8,6 +8,8 @@ To start the app via docker
 docker compose up frontend backend
 ```
 
+Visit `http://localhost:3000`
+
 ### Tests
 Tests can be run via docker as well without any pre-requisites
 ```bash
