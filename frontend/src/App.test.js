@@ -90,7 +90,9 @@ describe('App Component', () => {
   })
 
   test('handles file upload', async () => {
-    render(<App />)
+    await act(async () => {
+      render(<App />)
+    })
 
     // Create mock files
     const files = [
@@ -103,13 +105,17 @@ describe('App Component', () => {
     const uploadButton = screen.getByTestId('upload-button')
 
     // Simulate file selection
-    fireEvent.change(fileInput, { target: { files } })
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files } })
+    })
 
     // Verify files are selected
     expect(screen.getByDisplayValue('2 file(s) selected')).toBeInTheDocument()
 
     // Click upload button
-    fireEvent.click(uploadButton)
+    await act(async () => {
+      fireEvent.click(uploadButton)
+    })
 
     // Check if transcribe was called with the correct files
     await waitFor(() => {
