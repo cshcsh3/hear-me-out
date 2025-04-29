@@ -51,24 +51,29 @@ export default function App() {
   }, [])
 
   // Search functionality
+  // Only start searching with minimum 3 characters with 500ms debounce delay to reduce API calls
   useEffect(() => {
-    if (searchTerm.trim() === '' || searchTerm.trim().length < 3) {
-      setFilteredTranscriptions(transcriptions)
-    } else {
-      const searchTranscriptions = async () => {
-        try {
-          setIsLoading(true)
-          const response = await apiService.searchTranscriptions(searchTerm)
-          setFilteredTranscriptions(response.data)
-        } catch (err) {
-          setError(err.message)
-          console.error('Error searching transcriptions:', err)
-        } finally {
-          setIsLoading(false)
+    const debounceTimeout = setTimeout(() => {
+      if (searchTerm.trim() === '' || searchTerm.trim().length < 3) {
+        setFilteredTranscriptions(transcriptions)
+      } else {
+        const searchTranscriptions = async () => {
+          try {
+            setIsLoading(true)
+            const response = await apiService.searchTranscriptions(searchTerm)
+            setFilteredTranscriptions(response.data)
+          } catch (err) {
+            setError(err.message)
+            console.error('Error searching transcriptions:', err)
+          } finally {
+            setIsLoading(false)
+          }
         }
+        searchTranscriptions()
       }
-      searchTranscriptions()
-    }
+    }, 500) // 500ms debounce delay
+
+    return () => clearTimeout(debounceTimeout)
   }, [searchTerm, transcriptions])
 
   // Handle file upload

@@ -148,6 +148,8 @@ class TranscriptionsRepository:
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
+            
+            # Assume simple LIKE search is sufficient
             cursor.execute(
                 "SELECT * FROM transcriptions WHERE LOWER(transcribed_text) LIKE LOWER(?) OR LOWER(audio_file_name) LIKE LOWER(?)",
                 (f"%{query}%", f"%{query}%"),

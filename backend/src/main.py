@@ -59,6 +59,9 @@ async def transcribe(files: List[UploadFile] = File(...)) -> JSONResponse:
     results = []
     temp_files = []
     temp_dir = tempfile.mkdtemp()
+    
+    # Initialize transcriber
+    transcriber = TranscriberService()
 
     try:
         for file in files:
@@ -75,8 +78,7 @@ async def transcribe(files: List[UploadFile] = File(...)) -> JSONResponse:
                     status_code=400, detail=f"Invalid file type for {file.filename}. Supported format(s): MP3"
                 )
 
-            # Initialize transcriber and process the file
-            transcriber = TranscriberService()
+            # Process the file
             result = transcriber.transcribe_audio(temp_file_path)
 
             if result is None:
