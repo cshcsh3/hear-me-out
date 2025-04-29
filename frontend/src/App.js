@@ -1,113 +1,115 @@
-import { useState, useEffect, useRef } from 'react';
-import { 
-  Container, 
-  Typography, 
-  Box, 
-  TextField, 
-  Button, 
-  Paper, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  CircularProgress, 
-  Alert, 
+import { useState, useEffect, useRef } from 'react'
+import {
+  Container,
+  Typography,
+  Box,
+  TextField,
+  Button,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  CircularProgress,
+  Alert,
   InputAdornment
-} from '@mui/material';
-import Grid from '@mui/material/Grid';
-import SearchIcon from '@mui/icons-material/Search';
-import UploadIcon from '@mui/icons-material/Upload';
-import { apiService } from './services/api';
+} from '@mui/material'
+import Grid from '@mui/material/Grid'
+import SearchIcon from '@mui/icons-material/Search'
+import UploadIcon from '@mui/icons-material/Upload'
+import { apiService } from './services/api'
 
 export default function App() {
   // State management
-  const [transcriptions, setTranscriptions] = useState([]);
-  const [filteredTranscriptions, setFilteredTranscriptions] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [uploadedFile, setUploadedFile] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [error, setError] = useState(null);
+  const [transcriptions, setTranscriptions] = useState([])
+  const [filteredTranscriptions, setFilteredTranscriptions] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [uploadedFile, setUploadedFile] = useState(null)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [error, setError] = useState(null)
 
   // Fetch transcriptions from API
   useEffect(() => {
     const fetchTranscriptions = async () => {
       try {
-        setIsLoading(true);
-        const response = await apiService.getTranscriptions();
-        setTranscriptions(response.data);
-        setFilteredTranscriptions(response.data);
+        setIsLoading(true)
+        const response = await apiService.getTranscriptions()
+        setTranscriptions(response.data)
+        setFilteredTranscriptions(response.data)
       } catch (err) {
-        setError(err.message);
-        console.error('Error fetching transcriptions:', err);
+        setError(err.message)
+        console.error('Error fetching transcriptions:', err)
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    fetchTranscriptions();
-  }, []);
+    fetchTranscriptions()
+  }, [])
 
   // Search functionality
   useEffect(() => {
     if (searchTerm.trim() === '' || searchTerm.trim().length < 3) {
-      setFilteredTranscriptions(transcriptions);
+      setFilteredTranscriptions(transcriptions)
     } else {
       const searchTranscriptions = async () => {
         try {
-          setIsLoading(true);
-          const response = await apiService.searchTranscriptions(searchTerm);
-          setFilteredTranscriptions(response.data);
+          setIsLoading(true)
+          const response = await apiService.searchTranscriptions(searchTerm)
+          setFilteredTranscriptions(response.data)
         } catch (err) {
-          setError(err.message);
-          console.error('Error searching transcriptions:', err);
+          setError(err.message)
+          console.error('Error searching transcriptions:', err)
         } finally {
-          setIsLoading(false);
+          setIsLoading(false)
         }
-      };
-      searchTranscriptions();
+      }
+      searchTranscriptions()
     }
-  }, [searchTerm, transcriptions]);
+  }, [searchTerm, transcriptions])
 
   // Handle file upload
   const handleFileChange = (e) => {
     if (e.target.files.length > 0) {
-      setUploadedFile(e.target.files[0]);
+      setUploadedFile(Array.from(e.target.files))
     }
-  };
+  }
 
   const handleFileUpload = async () => {
-    if (uploadedFile) {
+    if (uploadedFile && uploadedFile.length > 0) {
       try {
-        setIsLoading(true);
-        
-        // Transcribe the uploaded file
-        await apiService.transcribe(uploadedFile);
-        setSuccessMessage(`File transcribed successfully!`);
-        
+        setIsLoading(true)
+
+        // Transcribe the uploaded files
+        await apiService.transcribe(uploadedFile)
+        setSuccessMessage(
+          `${uploadedFile.length} file(s) transcribed successfully!`
+        )
+
         // Refresh transcriptions after successful upload and transcription
-        const response = await apiService.getTranscriptions();
-        setTranscriptions(response.data);
-        setFilteredTranscriptions(response.data);
+        const transcriptionsResponse = await apiService.getTranscriptions()
+        setTranscriptions(transcriptionsResponse.data)
+        setFilteredTranscriptions(transcriptionsResponse.data)
       } catch (err) {
-        setError(err.message);
-        console.error('Error processing file:', err);
+        setError(err.message)
+        console.error('Error processing files:', err)
       } finally {
-        setIsLoading(false);
-        setUploadedFile(null);
+        setIsLoading(false)
+        setUploadedFile(null)
         setTimeout(() => {
-          setSuccessMessage('');
-          setError(null);
-        }, 10000);
+          setSuccessMessage('')
+          setError(null)
+        }, 10000)
       }
     }
-  };
+  }
 
   // Format date
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
+    const date = new Date(dateString)
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'short',
@@ -115,32 +117,38 @@ export default function App() {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
-    }).format(date);
-  };
+    }).format(date)
+  }
 
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef(null)
 
   return (
     <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', py: 4 }}>
       <Container maxWidth="lg">
-        <Typography variant="h3" component="h1" gutterBottom color="primary" fontWeight="bold">
+        <Typography
+          variant="h3"
+          component="h1"
+          gutterBottom
+          color="primary"
+          fontWeight="bold"
+        >
           Hear Me Out
         </Typography>
-        
+
         {/* Error message */}
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
         )}
-        
+
         {/* Success message */}
         {successMessage && (
           <Alert severity="success" sx={{ mb: 3 }}>
             {successMessage}
           </Alert>
         )}
-        
+
         <Grid container spacing={2} sx={{ mb: 4 }}>
           {/* Search */}
           <Grid size={{ xs: 12, sm: 8 }}>
@@ -155,18 +163,20 @@ export default function App() {
                   <InputAdornment position="start">
                     <SearchIcon size={20} />
                   </InputAdornment>
-                ),
+                )
               }}
             />
           </Grid>
-          
+
           {/* File upload */}
           <Grid size={{ xs: 12, sm: 4 }}>
             <Box sx={{ display: 'flex' }}>
               <TextField
                 fullWidth
-                value={uploadedFile ? uploadedFile.name : ''}
-                placeholder="Select audio file"
+                value={
+                  uploadedFile ? `${uploadedFile.length} file(s) selected` : ''
+                }
+                placeholder="Select audio files"
                 disabled
                 variant="outlined"
               />
@@ -175,11 +185,12 @@ export default function App() {
                 type="file"
                 accept="audio/*"
                 hidden
+                multiple
                 onChange={handleFileChange}
                 data-testid="file-input"
               />
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 onClick={() => fileInputRef.current.click()}
                 sx={{ ml: 1, minWidth: 'auto', px: 2 }}
               >
@@ -188,7 +199,7 @@ export default function App() {
               <Button
                 variant="contained"
                 color="primary"
-                disabled={!uploadedFile}
+                disabled={!uploadedFile || uploadedFile.length === 0}
                 onClick={handleFileUpload}
                 sx={{ ml: 1, minWidth: 'auto', px: 2 }}
                 data-testid="upload-button"
@@ -198,7 +209,7 @@ export default function App() {
             </Box>
           </Grid>
         </Grid>
-        
+
         {/* Records table */}
         <Paper elevation={2}>
           {isLoading ? (
@@ -218,7 +229,7 @@ export default function App() {
                 </TableHead>
                 <TableBody>
                   {filteredTranscriptions.length > 0 ? (
-                    filteredTranscriptions.map(record => (
+                    filteredTranscriptions.map((record) => (
                       <TableRow key={record.id}>
                         <TableCell>{record.id}</TableCell>
                         <TableCell>{record.audio_file_name}</TableCell>
@@ -246,5 +257,5 @@ export default function App() {
         </Paper>
       </Container>
     </Box>
-  );
+  )
 }

@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from transcriber.service import TranscriberService
 from transcription.service import TranscriptionsService
+from typing import List
 
 # Configure logging
 logging.basicConfig(
@@ -43,11 +44,11 @@ async def health():
 
 
 @app.post("/transcribe")
-async def transcribe(file: UploadFile = File(...)) -> JSONResponse:
-    """Transcribe an audio file.
+async def transcribe(files: List[UploadFile] = File(...)) -> JSONResponse:
+    """Transcribe multiple audio files.
 
     Args:
-        file: Audio file to transcribe
+        files: List of audio files to transcribe
 
     Returns:
         JSON response with transcription details or error message
@@ -55,34 +56,44 @@ async def transcribe(file: UploadFile = File(...)) -> JSONResponse:
     Raises:
         HTTPException: If the file type is invalid, transcription fails, or file already exists
     """
-    # Create a temporary directory to store the file
+    results = []
+    temp_files = []
     temp_dir = tempfile.mkdtemp()
-    temp_file_path = os.path.join(temp_dir, file.filename)
-    
-    # Write the file content to the temporary location
-    with open(temp_file_path, 'wb') as temp_file:
-        temp_file.write(await file.read())
 
     try:
-        # Validate file type, assumes only MP3 files are supported
-        if not temp_file_path.lower().endswith((".mp3")):
-            raise HTTPException(
-                status_code=400, detail="Invalid file type. Supported format(s): MP3"
-            )
+        for file in files:
+            temp_file_path = os.path.join(temp_dir, file.filename)
+            temp_files.append(temp_file_path)
+            
+            # Write the file content to the temporary location
+            with open(temp_file_path, 'wb') as temp_file:
+                temp_file.write(await file.read())
 
-        # Initialize transcriber and process the file
-        transcriber = TranscriberService()
-        result = transcriber.transcribe_audio(temp_file_path)
+            # Validate file type, assumes only MP3 files are supported
+            if not temp_file_path.lower().endswith((".mp3")):
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid file type for {file.filename}. Supported format(s): MP3"
+                )
 
-        if result is None:
-            raise HTTPException(status_code=400, detail="Audio transcription failed")
+            # Initialize transcriber and process the file
+            transcriber = TranscriberService()
+            result = transcriber.transcribe_audio(temp_file_path)
+
+            if result is None:
+                raise HTTPException(status_code=400, detail=f"Audio transcription failed for {file.filename}")
+
+            results.append({
+                "status": "success",
+                "transcription_id": result[0],
+                "transcription_text": result[1],
+                "filename": file.filename
+            })
 
         return JSONResponse(
             status_code=200,
             content={
                 "status": "success",
-                "transcription_id": result[0],
-                "transcription_text": result[1],
+                "results": results
             },
         )
 
@@ -101,8 +112,10 @@ async def transcribe(file: UploadFile = File(...)) -> JSONResponse:
         raise HTTPException(status_code=500, detail=error_detail) from e
 
     finally:
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
+        # Clean up all temporary files and the directory
+        for temp_file in temp_files:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
         if os.path.exists(temp_dir):
             os.rmdir(temp_dir)
 

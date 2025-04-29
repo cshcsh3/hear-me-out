@@ -14,12 +14,16 @@ def test_transcribe_success(client, mock_transcriber, tmp_path):
     test_file = tmp_path / "test.mp3"
     test_file.touch()
     with open(test_file, "rb") as f:
-        response = client.post("/transcribe", files={"file": ("test.mp3", f, "audio/mpeg")})
+        response = client.post("/transcribe", files={"files": ("test.mp3", f, "audio/mpeg")})
     assert response.status_code == 200
     assert response.json() == {
         "status": "success",
-        "transcription_id": "123",
-        "transcription_text": "Test transcription",
+        "results": [{
+            "status": "success",
+            "transcription_id": "123",
+            "transcription_text": "Test transcription",
+            "filename": "test.mp3"
+        }]
     }
     # Delete the temporary files
     test_file.unlink()
@@ -30,7 +34,7 @@ def test_transcribe_invalid_file_type(client, tmp_path):
     test_file = tmp_path / "test.m4a"
     test_file.touch()
     with open(test_file, "rb") as f:
-        response = client.post("/transcribe", files={"file": ("test.m4a", f, "audio/m4a")})
+        response = client.post("/transcribe", files={"files": ("test.m4a", f, "audio/m4a")})
     assert response.status_code == 400
     assert "Invalid file type" in response.json()["detail"]
     # Delete the temporary files
@@ -44,7 +48,7 @@ def test_transcribe_failed(client, mock_transcriber, tmp_path):
     test_file = tmp_path / "test.mp3"
     test_file.touch()
     with open(test_file, "rb") as f:
-        response = client.post("/transcribe", files={"file": ("test.mp3", f, "audio/mpeg")})
+        response = client.post("/transcribe", files={"files": ("test.mp3", f, "audio/mpeg")})
     assert response.status_code == 400
     assert "Audio transcription failed" in response.json()["detail"]
     # Delete the temporary files
@@ -105,7 +109,7 @@ def test_transcribe_throws_unexpected_error(client, mock_transcriber, tmp_path):
     test_file = tmp_path / "test.mp3"
     test_file.touch()
     with open(test_file, "rb") as f:
-        response = client.post("/transcribe", files={"file": ("test.mp3", f, "audio/mpeg")})
+        response = client.post("/transcribe", files={"files": ("test.mp3", f, "audio/mpeg")})
     assert response.status_code == 500
     assert "Test error" in response.json()["detail"]
 
@@ -120,13 +124,13 @@ def test_transcribe_duplicate_file(client, mock_transcriber, tmp_path):
     test_file = tmp_path / "test.mp3"
     test_file.touch()
     with open(test_file, "rb") as f:
-        response = client.post("/transcribe", files={"file": ("test.mp3", f, "audio/mpeg")})
+        response = client.post("/transcribe", files={"files": ("test.mp3", f, "audio/mpeg")})
     assert response.status_code == 200
 
     # Second attempt with same file name should fail
     mock_transcriber.transcribe_audio.side_effect = ValueError("A transcription for file 'test.mp3' already exists")
     with open(test_file, "rb") as f:
-        response = client.post("/transcribe", files={"file": ("test.mp3", f, "audio/mpeg")})
+        response = client.post("/transcribe", files={"files": ("test.mp3", f, "audio/mpeg")})
     assert response.status_code == 409
     assert "already exists" in response.json()["detail"]
 
